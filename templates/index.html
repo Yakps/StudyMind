@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ödev & Not Analiz Aracı</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+</head>
+<body>
+
+<div class="shell">
+
+  <!-- ── Sidebar ── -->
+  <aside class="sidebar">
+
+    <div class="logo">
+      <div class="logo-icon">
+        <svg viewBox="0 0 16 16"><path d="M2 3h12v2H2zM2 7h8v2H2zM2 11h10v2H2z"/></svg>
+      </div>
+      <div>
+        <div class="logo-name" data-tr="Ödev & Not" data-en="Homework & Note">Ödev & Not</div>
+        <div class="logo-sub" data-tr="Analiz Aracı" data-en="Analysis Tool">Analiz Aracı</div>
+      </div>
+    </div>
+
+    <div class="sep"></div>
+
+    <div class="field">
+      <label data-tr="OpenAI API Anahtarı" data-en="OpenAI API Key">OpenAI API Anahtarı</label>
+      <input type="password" id="api-key" placeholder="sk-..." autocomplete="off" />
+    </div>
+
+    <div class="field">
+      <label data-tr="Özet Uzunluğu" data-en="Summary Length">Özet Uzunluğu</label>
+      <select id="ozet-uzunlugu">
+        <option value="kisa" data-tr="Kısa — 3-5 cümle"   data-en="Short — 3-5 sentences">Kısa — 3-5 cümle</option>
+        <option value="orta" selected data-tr="Orta — 1 paragraf" data-en="Medium — 1 paragraph">Orta — 1 paragraf</option>
+        <option value="detayli" data-tr="Detaylı — 2-3 paragraf" data-en="Detailed — 2-3 paragraphs">Detaylı — 2-3 paragraf</option>
+      </select>
+    </div>
+
+    <div class="sep"></div>
+
+    <div class="field">
+      <label data-tr="Dosya Yükle" data-en="Upload File">Dosya Yükle</label>
+      <div class="upload-zone">
+        <input type="file" id="dosya" accept=".pdf,.docx" />
+        <div class="u-icon">
+          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <polyline points="16 16 12 12 8 16"/>
+            <line x1="12" y1="12" x2="12" y2="21"/>
+            <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/>
+          </svg>
+        </div>
+        <p data-tr="PDF veya DOCX yükle" data-en="Upload PDF or DOCX">PDF veya DOCX yükle</p>
+        <small data-tr="Tıkla ya da sürükle" data-en="Click or drag & drop">Tıkla ya da sürükle</small>
+        <div id="file-name"></div>
+      </div>
+    </div>
+
+    <div class="field">
+      <label data-tr="veya metin yapıştır" data-en="or paste text">veya metin yapıştır</label>
+      <textarea id="metin"
+        data-tr-placeholder="Ders notlarını buraya yapıştırabilirsin..."
+        data-en-placeholder="Paste your notes here..."
+        placeholder="Ders notlarını buraya yapıştırabilirsin..."></textarea>
+    </div>
+
+    <button class="btn-run" id="btn-run"
+      data-tr="Analiz Et" data-en="Analyze"
+      onclick="analiz()">Analiz Et</button>
+
+    <div class="sidebar-note">
+      <span data-tr="API anahtarını" data-en="Save your API key in">API anahtarını</span>
+      <code>settings.py</code>
+      <span data-tr="'ye kaydedersen burada girmen gerekmez." data-en="to skip entering it here.">'ye kaydedersen burada girmen gerekmez.</span>
+    </div>
+
+  </aside>
+
+  <!-- ── Main ── -->
+  <main class="main">
+
+    <!-- Dil Butonu -->
+    <div class="lang-bar">
+      <button class="btn-lang" id="btn-lang" onclick="toggleLang()">
+        <span id="lang-label">EN</span>
+      </button>
+    </div>
+
+    <!-- Hero -->
+    <div class="hero" id="hero">
+      <h1>
+        <span data-tr="Ödevini analiz et," data-en="Analyze your notes,">Ödevini analiz et,</span>
+        <br><em data-tr="daha iyi öğren." data-en="learn better.">daha iyi öğren.</em>
+      </h1>
+      <p data-tr="PDF veya DOCX yükle — ya da metin yapıştır. Özet, flashcard ve sınav soruları otomatik üretilir."
+         data-en="Upload PDF or DOCX — or paste text. Summary, flashcards and quiz questions are generated automatically.">
+        PDF veya DOCX yükle — ya da metin yapıştır. Özet, flashcard ve sınav soruları otomatik üretilir.
+      </p>
+      <div class="hero-tags">
+        <span class="tag" data-tr="Özet"      data-en="Summary">Özet</span>
+        <span class="tag" data-tr="Flashcard" data-en="Flashcard">Flashcard</span>
+        <span class="tag" data-tr="10 Soru"   data-en="10 Questions">10 Soru</span>
+        <span class="tag" data-tr="Türkçe"    data-en="Turkish">Türkçe</span>
+      </div>
+    </div>
+
+    <!-- Loading -->
+    <div class="loading" id="loading">
+      <div class="spinner"></div>
+      <span id="loading-text" data-tr="Analiz ediliyor…" data-en="Analyzing…">Analiz ediliyor…</span>
+    </div>
+
+    <!-- Error -->
+    <div class="error-box" id="error-box"></div>
+
+    <!-- Results -->
+    <div class="results" id="results">
+
+      <!-- Özet -->
+      <div>
+        <div class="sec-head">
+          <h3 data-tr="Özet" data-en="Summary">Özet</h3>
+        </div>
+        <div class="ozet-box"><p id="ozet-text"></p></div>
+      </div>
+
+      <!-- Flashcardlar -->
+      <div>
+        <div class="sec-head">
+          <h3 data-tr="Flashcard'lar" data-en="Flashcards">Flashcard'lar</h3>
+        </div>
+        <div class="fc-grid" id="fc-grid"></div>
+      </div>
+
+      <!-- Sınav -->
+      <div>
+        <div class="sec-head">
+          <h3 data-tr="Sınav Soruları" data-en="Quiz Questions">Sınav Soruları</h3>
+        </div>
+        <div class="sinav-list" id="sinav-list"></div>
+        <div class="skor-bar" id="skor-bar">
+          <span data-tr="Sonuç" data-en="Result">Sonuç</span>
+          <strong id="skor-text">—</strong>
+        </div>
+
+        <button class="btn-yeni" id="btn-yeni" onclick="yeniSorular()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="1 4 1 10 7 10"/>
+            <path d="M3.51 15a9 9 0 1 0 .49-3.86"/>
+          </svg>
+          <span data-tr="Yeni Sorular Üret" data-en="Generate New Questions">Yeni Sorular Üret</span>
+        </button>
+      </div>
+
+    </div>
+
+  </main>
+</div>
+
+<script>
+// ── Dil sistemi ──
+let lang = 'tr';
+
+function toggleLang() {
+  lang = lang === 'tr' ? 'en' : 'tr';
+  document.getElementById('lang-label').textContent = lang === 'tr' ? 'EN' : 'TR';
+  applyLang();
+}
+
+function applyLang() {
+  // data-tr / data-en attribute olan tüm elementleri güncelle
+  document.querySelectorAll('[data-tr]').forEach(el => {
+    el.textContent = el.getAttribute('data-' + lang);
+  });
+
+  // Select option'ları güncelle
+  document.querySelectorAll('select option[data-tr]').forEach(opt => {
+    opt.textContent = opt.getAttribute('data-' + lang);
+  });
+
+  // Textarea placeholder
+  const ta = document.getElementById('metin');
+  ta.placeholder = ta.getAttribute('data-' + lang + '-placeholder');
+
+  // Buton içinde span olmayan btn-run
+  const btnRun = document.getElementById('btn-run');
+  btnRun.textContent = btnRun.getAttribute('data-' + lang);
+
+  // Page title
+  document.title = lang === 'tr'
+    ? 'Ödev & Not Analiz Aracı'
+    : 'Homework & Note Analysis Tool';
+
+  // Loading text
+  const lt = document.getElementById('loading-text');
+  lt.textContent = lt.getAttribute('data-' + lang);
+
+  // Skor bar "Sonuç / Result"
+  document.querySelectorAll('.skor-bar span[data-tr]').forEach(el => {
+    el.textContent = el.getAttribute('data-' + lang);
+  });
+
+  // Sınav sorusu "Soru N / Question N" prefix
+  document.querySelectorAll('.soru-no').forEach((el, i) => {
+    el.textContent = (lang === 'tr' ? 'Soru ' : 'Question ') + (i + 1);
+  });
+
+  // Flashcard flip hint
+  document.querySelectorAll('.fc-tip').forEach(el => {
+    el.textContent = lang === 'tr' ? 'çevir' : 'flip';
+  });
+
+  // Yeni sorular butonu span
+  const yeniSpan = document.querySelector('#btn-yeni span[data-tr]');
+  if (yeniSpan) yeniSpan.textContent = yeniSpan.getAttribute('data-' + lang);
+}
+
+// ── Dosya adı ──
+document.getElementById('dosya').addEventListener('change', function () {
+  document.getElementById('file-name').textContent = this.files[0]?.name || '';
+});
+
+let dogruSayisi = 0;
+let toplamSoru  = 0;
+let _metin      = "";
+let _apiKey     = "";
+
+function setDisplay(id, val) {
+  document.getElementById(id).style.display = val;
+}
+
+// ── Ana Analiz ──
+async function analiz() {
+  const apiKey = document.getElementById('api-key').value.trim();
+  const ozet   = document.getElementById('ozet-uzunlugu').value;
+  const metin  = document.getElementById('metin').value.trim();
+  const dosya  = document.getElementById('dosya').files[0];
+
+  setDisplay('hero', 'none');
+  setDisplay('results', 'none');
+  setDisplay('error-box', 'none');
+  setDisplay('loading', 'flex');
+  document.getElementById('loading-text').textContent =
+    lang === 'tr' ? 'Analiz ediliyor…' : 'Analyzing…';
+  document.getElementById('btn-run').disabled = true;
+  dogruSayisi = 0; toplamSoru = 0;
+
+  const fd = new FormData();
+  if (apiKey) fd.append('api_key', apiKey);
+  fd.append('ozet_uzunlugu', ozet);
+  if (dosya) fd.append('dosya', dosya);
+  else       fd.append('metin', metin);
+
+  try {
+    const res  = await fetch('/analiz', { method: 'POST', body: fd });
+    const data = await res.json();
+    setDisplay('loading', 'none');
+
+    if (data.hata) { showError(data.hata); return; }
+
+    _metin  = data._metin || metin;
+    _apiKey = apiKey;
+    render(data);
+
+  } catch (err) {
+    setDisplay('loading', 'none');
+    showError((lang === 'tr' ? 'Bağlantı hatası: ' : 'Connection error: ') + err.message);
+  } finally {
+    document.getElementById('btn-run').disabled = false;
+    document.getElementById('btn-run').textContent =
+      document.getElementById('btn-run').getAttribute('data-' + lang);
+  }
+}
+
+// ── Yeni Sorular ──
+async function yeniSorular() {
+  if (!_metin) return;
+
+  setDisplay('error-box', 'none');
+  const btn = document.getElementById('btn-yeni');
+  btn.disabled = true;
+  btn.querySelector('span').textContent = lang === 'tr' ? 'Üretiliyor…' : 'Generating…';
+
+  dogruSayisi = 0; toplamSoru = 0;
+  setDisplay('skor-bar', 'none');
+
+  try {
+    const res  = await fetch('/yeni-sorular', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ api_key: _apiKey, metin: _metin })
+    });
+    const data = await res.json();
+
+    if (data.hata) { showError(data.hata); return; }
+    renderSorular(data.sinav_sorulari || []);
+
+  } catch (err) {
+    showError((lang === 'tr' ? 'Bağlantı hatası: ' : 'Connection error: ') + err.message);
+  } finally {
+    btn.disabled = false;
+    const span = btn.querySelector('span[data-tr]');
+    if (span) span.textContent = span.getAttribute('data-' + lang);
+  }
+}
+
+// ── Render ──
+function render(data) {
+  document.getElementById('ozet-text').textContent = data.ozet || '—';
+
+  const grid = document.getElementById('fc-grid');
+  grid.innerHTML = '';
+  (data.flashcardlar || []).forEach(fc => {
+    const el = document.createElement('div');
+    el.className = 'fc';
+    el.innerHTML = `
+      <div class="fc-inner">
+        <div class="fc-front">${x(fc.soru)}</div>
+        <div class="fc-back">${x(fc.cevap)}</div>
+      </div>
+      <span class="fc-tip">${lang === 'tr' ? 'çevir' : 'flip'}</span>`;
+    el.addEventListener('click', () => el.classList.toggle('flipped'));
+    grid.appendChild(el);
+  });
+
+  renderSorular(data.sinav_sorulari || []);
+  document.getElementById('results').style.display = 'flex';
+}
+
+function renderSorular(sorular) {
+  const liste = document.getElementById('sinav-list');
+  liste.innerHTML = '';
+  toplamSoru  = sorular.length;
+  dogruSayisi = 0;
+  setDisplay('skor-bar', 'none');
+
+  sorular.forEach((s, i) => {
+    const d = document.createElement('div');
+    d.className = 'soru-card';
+    d.innerHTML = `
+      <div class="soru-no">${lang === 'tr' ? 'Soru' : 'Question'} ${i + 1}</div>
+      <div class="soru-text">${x(s.soru)}</div>
+      <div class="secenekler" data-dogru="${s.dogru}">
+        ${(s.secenekler || []).map(o =>
+          `<div class="secenek" data-harf="${o[0]}">${x(o)}</div>`
+        ).join('')}
+      </div>`;
+    d.querySelectorAll('.secenek').forEach(el => el.addEventListener('click', () => cevapla(el)));
+    liste.appendChild(d);
+  });
+
+  liste.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// ── Cevap ──
+function cevapla(el) {
+  const grup = el.closest('.secenekler');
+  if (grup.dataset.cevaplandi) return;
+  grup.dataset.cevaplandi = '1';
+
+  const dogru = grup.dataset.dogru;
+  grup.querySelectorAll('.secenek').forEach(s => {
+    s.classList.add('disabled');
+    if (s.dataset.harf === dogru) s.classList.add('dogru');
+  });
+  if (el.dataset.harf === dogru) dogruSayisi++;
+  else el.classList.add('yanlis');
+
+  const cevaplanan = document.querySelectorAll('.secenekler[data-cevaplandi]').length;
+  if (cevaplanan === toplamSoru) {
+    document.getElementById('skor-text').textContent =
+      `${dogruSayisi} / ${toplamSoru} ${lang === 'tr' ? 'doğru' : 'correct'}`;
+    setDisplay('skor-bar', 'flex');
+  }
+}
+
+function showError(msg) {
+  const eb = document.getElementById('error-box');
+  eb.textContent = msg;
+  setDisplay('error-box', 'block');
+}
+
+function x(s) {
+  return String(s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+</script>
+
+</body>
+</html>
